@@ -18,6 +18,8 @@ let circleObject = {
     height: 0,
     color1: "white",
     color2: "black",
+    up: false,
+    left: false,
     update: function(){
         if(!(this.y + this.radius >= canvas.height)){
             this.y++;
@@ -37,6 +39,21 @@ let imageObject = {
     sourceWidth: 0,
     sourceHeight: 0,
     image: undefined,
+    up: false,
+    left: false,
+    type: undefined,
+    halfWidth: function(){
+        return this.width/2;
+    },
+    halfHeight: function(){
+        return this.height/2;
+    },
+    centerX: function(){
+        return this.x + this.halfWidth();
+    },
+    centerY: function(){
+        return this.y + this.halfHeight();
+    },
     update: function(){
 
     },
@@ -54,20 +71,88 @@ let spriteSheet = new Image();
 spriteSheet.src = "spriteSheet.png";
 spriteSheet.addEventListener("load", loadHandler, false);
 assetsToLoad.push(spriteSheet);
-makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet);
-makeAlien();
-function makeAlien(){
-    let tempAlien = makeImage(canvas.width/2,canvas.height/2,60,60, 50, 0, 50, 50, spriteSheet);
+makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet, "background");
+
+for(var i=0; i<10; i++){
+    makeAlien((canvas.width/2)*i,canvas.height/2);
+}
+
+function hitTestRectangle(r1,r2){
+    var hit = false;
+
+    var vx = r1.centerX() - r2.centerX();
+    var vy = r1.centerY() - r2.centerY();
+
+    var combinedHalfWidths = r1.halfWidth() + r2.halfWidth();
+    var combinedHalfHeights = r1.halfHeight() + r2.halfHeight();
+
+    if(Math.abs(vx) < combinedHalfWidths){
+        if(Math.abs(vy) < combinedHalfHeights){
+            hit = true;
+        }else{
+            hit = false;
+        }
+    }else{
+        hit = false;
+    }
+    return hit;
+}
+function getRandomNum(max){
+    return Math.floor(Math.random()*max);
+}
+function destroyAlien(alien){
+    alien.sourceX = 150;
+    setTimeout(function(){
+        spriteArray.splice(spriteArray.indexOf(alien), 1);
+    },200);
+}
+function makeAlien(x, y){
+    let tempAlien = makeImage(x,y,60,60, 50, 0, 50, 50, spriteSheet, "alien");
     tempAlien.count =0;
+    tempAlien.up = getRandomNum(2);
+    tempAlien.left = getRandomNum(2);
+    tempAlien.hit = false;
     tempAlien.update = function(){
-        if(this.count%10 === 0){
-            if(this.state !== 0){
-                this.state = 0;
-                this.sourceX += 50;
-            }else{
-                this.state = 1;
-                this.sourceX -= 50;
+        for(sprite of spriteArray){
+            if(sprite !== this && sprite.type === "alien" && this.type === "alien" && !this.hit){
+                var hit = hitTestRectangle(this, sprite);
+                if(hit){
+                    this.hit = true;
+                    destroyAlien(this);
+                }else{
+                    if(this.count%10 === 0 && !this.hit){
+                        if(this.state !== 0){
+                            this.state = 0;
+                            this.sourceX += 50;
+                        }else{
+                            this.state = 1;
+                            this.sourceX -= 50;
+                        }
+                        if(this.y <= 0){
+                            this.up = false;
+                        }
+                        if(this.y + this.height >= canvas.height){
+                            this.up = true;
+                        }
+                        if(this.x < 0){
+                            this.left = false;
+                        }
+                        if(this.x + this.width >= canvas.width){
+                            this.left = true;
+                        }
+                    }
+                }
             }
+        }
+        if(this.up){
+            this.y -= 1;
+        }else{
+            this.y += 1;
+        }
+        if(this.left){
+            this.x -= 1;
+        }else{
+            this.x += 1;
         }
         this.count++;
         if(this.count === 100){
@@ -81,7 +166,7 @@ function loadHandler(){
         update();
     }
 }
-function makeImage(x, y, width, height, sourceX, sourceY, sourceWidth, sourceHeight, image){
+function makeImage(x, y, width, height, sourceX, sourceY, sourceWidth, sourceHeight, image, type){
     let tempImage = Object.create(imageObject);
     tempImage.x = x;
     tempImage.y = y;
@@ -92,6 +177,7 @@ function makeImage(x, y, width, height, sourceX, sourceY, sourceWidth, sourceHei
     tempImage.sourceWidth = sourceWidth;
     tempImage.sourceHeight = sourceHeight;
     tempImage.image = image;
+    tempImage.type = type;
     spriteArray.push(tempImage);
     return tempImage;
 }
