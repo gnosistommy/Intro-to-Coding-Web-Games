@@ -94,28 +94,28 @@ function hitTestRectangle(r1,r2){
         if(Math.abs(vy) < combinedHalfHeights){
             hit = true;
             if(vy >= 0 && vx >= 0){
-                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfHeights - Math.abs(vy)){
                     TBLR = "L";
                 }else{
                     TBLR = "T";
                 }
             }
             if(vy >= 0 && vx < 0){
-                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfHeights - Math.abs(vy)){
                     TBLR = "R";
                 }else{
                     TBLR = "T";
                 }
             }
             if(vy < 0 && vx < 0){
-                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfHeights - Math.abs(vy)){
                     TBLR = "R";
                 }else{
                     TBLR = "B";
                 }
             }
             if(vy <0 && vx >= 0){
-                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfHeights - Math.abs(vy)){
                     TBLR = "L";
                 }else{
                     TBLR = "B";
