@@ -4,6 +4,7 @@
 let spriteArray = [];
 let assetsLoaded = 0;
 let assetsToLoad = [];
+let HERO;
 let canvas = document.getElementById('canvas');
 let context = canvas.getContext("2d");
 canvas.style.backgroundColor = "yellow";
@@ -42,6 +43,9 @@ let imageObject = {
     up: false,
     left: false,
     type: undefined,
+    normal: 0,
+    hit: 1,
+    state: 0,
     halfWidth: function(){
         return this.width/2;
     },
@@ -72,14 +76,14 @@ spriteSheet.src = "spriteSheet.png";
 spriteSheet.addEventListener("load", loadHandler, false);
 assetsToLoad.push(spriteSheet);
 makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet, "background");
-
+makeHero((canvas.width/2)-30, canvas.height - 60);
 for(var i=0; i<10; i++){
     makeAlien((canvas.width/2)*i,canvas.height/2);
 }
 
 function hitTestRectangle(r1,r2){
     var hit = false;
-
+    var TBLR = "";
     var vx = r1.centerX() - r2.centerX();
     var vy = r1.centerY() - r2.centerY();
 
@@ -89,13 +93,41 @@ function hitTestRectangle(r1,r2){
     if(Math.abs(vx) < combinedHalfWidths){
         if(Math.abs(vy) < combinedHalfHeights){
             hit = true;
+            if(vy >= 0 && vx >= 0){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                    TBLR = "L";
+                }else{
+                    TBLR = "T";
+                }
+            }
+            if(vy >= 0 && vx < 0){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                    TBLR = "R";
+                }else{
+                    TBLR = "T";
+                }
+            }
+            if(vy < 0 && vx < 0){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                    TBLR = "R";
+                }else{
+                    TBLR = "B";
+                }
+            }
+            if(vy <0 && vx >= 0){
+                if(combinedHalfWidths - Math.abs(vx) >= combinedHalfWidths - Math.abs(vy)){
+                    TBLR = "L";
+                }else{
+                    TBLR = "B";
+                }
+            }
         }else{
             hit = false;
         }
     }else{
         hit = false;
     }
-    return hit;
+    return {hit: hit, TBLR: TBLR};
 }
 function getRandomNum(max){
     return Math.floor(Math.random()*max);
@@ -106,28 +138,94 @@ function destroyAlien(alien){
         spriteArray.splice(spriteArray.indexOf(alien), 1);
     },200);
 }
+function flipFlop(alien){
+    if(alien.state !== alien.flippersUp){
+        alien.state = alien.flippersUp;
+        alien.sourceX += 50;
+    }else{
+        alien.state = alien.flippersDown;
+        alien.sourceX -= 50;
+    }
+}
+function destroyHero(){
+    HERO.sourceX = 200;
+    setTimeout(function(){
+        spriteArray.splice(spriteArray.indexOf(HERO), 1);
+    },200);
+}
+function shoot(){
+    let tempShot = makeImage(HERO.x+HERO.halfWidth()-10,HERO.y, 20, 25, 250, 0, 25, 20, spriteSheet, "shot");
+    tempShot.update = function(){
+        this.y -= 7;
+        for(sprite of spriteArray){
+            if(sprite.type === "alien" && this.state !== this.hit){
+                var hit = hitTestRectangle(this, sprite);
+                if(hit.hit){
+                    this.state = this.hit;
+                    sprite.state = sprite.hit;
+                    destroyAlien(sprite);
+                    spriteArray.splice(spriteArray.indexOf(this), 1);
+                }
+            }
+        }
+    }
+}
+function makeHero(x, y){
+    HERO = makeImage(x,y, 60, 60, 0,0,50,50,spriteSheet, "hero");
+    HERO.right = false;
+    HERO.update = function(){
+        for(sprite of spriteArray){
+            if(this.state !== this.hit && sprite.type === "alien"){
+                var hit = hitTestRectangle(this, sprite);
+                if(hit.hit){
+                    this.state = this.hit;
+                    destroyHero();
+                }
+            }
+        }
+        if(this.right && this.x+this.width < canvas.width){
+            this.x += 5;
+        }
+        if(this.left && this.x > 0){
+            this.x -= 5;
+        }
+    };
+}
 function makeAlien(x, y){
     let tempAlien = makeImage(x,y,60,60, 50, 0, 50, 50, spriteSheet, "alien");
     tempAlien.count =0;
     tempAlien.up = getRandomNum(2);
     tempAlien.left = getRandomNum(2);
-    tempAlien.hit = false;
+    tempAlien.flippersUp = 2;
+    tempAlien.flippersDown = 3;
+    tempAlien.state = tempAlien.flippersDown;
     tempAlien.update = function(){
         for(sprite of spriteArray){
-            if(sprite !== this && sprite.type === "alien" && this.type === "alien" && !this.hit){
+            if(sprite !== this && sprite.type === "alien" && this.type === "alien" && this.state !== this.hit){
                 var hit = hitTestRectangle(this, sprite);
-                if(hit){
-                    this.hit = true;
-                    destroyAlien(this);
+                if(hit.hit){
+                    //this.hit = true;
+                    //destroyAlien(this);
+                    if(hit.TBLR === "T"){
+                        this.up = false;
+                    }
+                    if(hit.TBLR === "B"){
+                        this.up = true;
+                    }
+                    if(hit.TBLR === "L"){
+                        this.left = false;
+                    }
+                    if(hit.TBLR === "R"){
+                        this.left = true;
+                    }
+                    if(this.count%10 === 0){
+                        flipFlop(this);
+                    }
                 }else{
-                    if(this.count%10 === 0 && !this.hit){
-                        if(this.state !== 0){
-                            this.state = 0;
-                            this.sourceX += 50;
-                        }else{
-                            this.state = 1;
-                            this.sourceX -= 50;
-                        }
+                    if(this.count%10 === 0 && this.state !== this.hit){
+                        
+                        flipFlop(this);
+                        
                         if(this.y <= 0){
                             this.up = false;
                         }
@@ -236,6 +334,39 @@ function render(){
         sprite.draw();
     }
 }
-/*window.onload = function(){
-    update();
-}*/
+function keyDownHandler(evt){
+    evt.preventDefault();
+    //console.log(evt.keyCode);
+    switch(evt.keyCode){
+        case 39:
+            //right arrow
+            HERO.right = true;
+            break;
+        case 37:
+            //left arrow
+            HERO.left = true;
+            break;
+        case 32:
+            //spacebar
+            shoot();
+            break;
+        default:
+            break;
+    }
+}
+function keyUpHandler(evt){
+    evt.preventDefault();switch(evt.keyCode){
+        case 39:
+            //right arrow
+            HERO.right = false;
+            break;
+        case 37:
+            //left arrow
+            HERO.left = false;
+            break;
+        default:
+            break;
+    }
+}
+window.addEventListener("keydown", keyDownHandler, false);
+window.addEventListener("keyup", keyUpHandler, false);
