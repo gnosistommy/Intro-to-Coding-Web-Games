@@ -4,7 +4,15 @@
 let spriteArray = [];
 let assetsLoaded = 0;
 let assetsToLoad = [];
+let shots = [];
 let Hero;
+let PAUSED = 0;
+let PLAYING = 1;
+let OVER = 2;
+let GAMESTATE = PAUSED;
+let SCORE = 0;
+let TIMER = 30;
+let timerInterval;
 let canvas = document.getElementById('canvas');
 let context = canvas.getContext("2d");
 canvas.style.backgroundColor = "yellow";
@@ -76,11 +84,51 @@ spriteSheet.src = "spriteSheet.png";
 spriteSheet.addEventListener("load", loadHandler, false);
 assetsToLoad.push(spriteSheet);
 makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet, "background");
-makeHero((canvas.width/2)-30, canvas.height - 60);
-for(var i=0; i<10; i++){
-    makeAlien((canvas.width/2)*i,canvas.height/2);
+function pauseGame(){
+    GAMESTATE = PAUSED;
+    startButton.innerHTML = "START";
+    startButton.removeEventListener("click", pauseGame);
+    startButton.addEventListener("click", startGame, false);
+    clearInterval(timerInterval);
 }
+function startGame(){ 
+    GAMESTATE = PLAYING;
+    startButton.innerHTML = "PAUSE";
+    startButton.removeEventListener("click", startGame);
+    startButton.addEventListener("click", pauseGame, false);
+    if(!Hero || TIMER === 0){
+        spriteArray = [];
+        SCORE = 0;
+        TIMER = 30;
+        makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet, "background");
+        makeHero((canvas.width/2)-30, canvas.height - 60);
+        for(var i=0; i<10; i++){
+            //makeAlien((canvas.width/2)*i,canvas.height/2);
+            attack();
+        }
 
+    }
+    timerInterval = setInterval(function(){
+        if(TIMER > 0){
+            TIMER--;
+        }else{
+            clearInterval(timerInterval);
+            endGame()
+        }
+    },1000);
+}
+function endGame(){
+    GAMESTATE = OVER;
+     shots= [];
+    startButton.innerHTML = "START";
+    startButton.removeEventListener("click", pauseGame);
+    startButton.addEventListener("click", startGame, false);
+}
+function attack(){
+    var x = canvas.width/(Math.floor(canvas.width/60));
+    var y = -60;
+    makeAlien(x*getRandomNum(Math.floor(canvas.width/60)-1),y);
+}
 function hitTestRectangle(r1,r2){
     var hit = false;
     var TBLR = "";
@@ -137,6 +185,9 @@ function destroyAlien(alien){
     alien.sourceX = 150;
     setTimeout(function(){
         spriteArray.splice(spriteArray.indexOf(alien), 1);
+        if(GAMESTATE === PLAYING){
+            attack();
+        }
     },200);
 }
 function destroyHero(){
@@ -144,6 +195,9 @@ function destroyHero(){
     setTimeout(function(){
         spriteArray.splice(spriteArray.indexOf(Hero), 1);
         Hero = null;
+        endGame();
+        startButton.innerHTML = "START";
+        startButton.addEventListener("click", startGame, false);
     },200);
 }
 function flipFlop(alien){
@@ -159,22 +213,28 @@ function shoot(){
     let tempShot = makeImage(Hero.x+Hero.halfWidth()-12.5,Hero.y , 25, 20, 250, 0, 25, 20, spriteSheet, "shot");
     tempShot.update = function(){
         for(sprite of spriteArray){
-            if(sprite.type === "alien"){
+            if(sprite.type === "alien" && sprite.state !== sprite.hit){
                 var hit = hitTestRectangle(this, sprite);
                 if(hit.hit){
+                    shots.pop();
                     this.state = this.hit;
-                    // put sprite.state = sprite.hit here ///////
+                    sprite.state = sprite.hit;
                     destroyAlien(sprite);
                     spriteArray.splice(spriteArray.indexOf(this), 1);
+                    SCORE += 100;
                 }
             }
+
+        }if(this.y < (this.height*-1)){
+            spriteArray.splice(spriteArray.indexOf(this), 1);
+            shots.pop();
         }
         this.y -= 7;
     }
+    shots.push(tempShot);
 }
 function makeHero(x, y){
     Hero = makeImage(x, y, 60, 60, 0, 0, 50, 50, spriteSheet, "hero");
-    Hero.right = false;
     Hero.update = function(){
         for(sprite of spriteArray){
             if(sprite.type === "alien" && this.state !== this.hit){
@@ -220,31 +280,24 @@ function makeAlien(x, y){
                     if(hit.TBLR === "R"){
                         this.left = true;
                     }
-                    // move this outside if() ///
-                    if(this.count%10 === 0 ){
-                        flipFlop(this);
-                    }
-                }else{
-                    if(this.count%10 === 0 && this.state !== this.hit){
 
-                        flipFlop(this);
-                        // move this outside if() ///
-
-                        if(this.y <= 0){
-                            this.up = false;
-                        }
-                        if(this.y + this.height >= canvas.height){
-                            this.up = true;
-                        }
-                        if(this.x < 0){
-                            this.left = false;
-                        }
-                        if(this.x + this.width >= canvas.width){
-                            this.left = true;
-                        }
-                    }
                 }
             }
+        }
+        if(this.y <= 0){
+            this.up = false;
+        }
+        if(this.y + this.height >= canvas.height){
+            this.up = true;
+        }
+        if(this.x < 0){
+            this.left = false;
+        }
+        if(this.x + this.width >= canvas.width){
+            this.left = true;
+        }
+        if(this.count%10 === 0 && this.state !== this.hit){
+            flipFlop(this);
         }
         if(this.up){
             this.y -= 1;
@@ -333,9 +386,46 @@ function update(){
     requestAnimationFrame(update, canvas);
 }
 function render(){
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    for(sprite of spriteArray){
-        sprite.draw();
+    if(GAMESTATE === PLAYING){
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        for(sprite of spriteArray){
+            sprite.draw();
+        }
+        context.fillStyle = "yellow";
+        context.font = "bold 20px Arial";
+        context.shadowColor = "black";
+        context.shadowBlur = 5;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.fillText(TIMER, 3, 16);
+        context.font = "bold 30px Arial";
+        context.fillText("score:" + SCORE, 3, 51);
+        context.shadowColor = "transparent";
+        context.shadowBlur = 0;
+    }else if(GAMESTATE === PAUSED){
+        spriteArray[0].draw();
+        context.fillStyle = "yellow";
+        context.font = "bold 50px Arial";
+        context.fillText("PAUSED", (canvas.width/2)-(context.measureText("PAUSED").width/2), canvas.height/2);
+    }else{
+        for(sprite of spriteArray){
+            if(sprite.type === "alien"){
+                destroyAlien(sprite);
+            }else{
+                sprite.draw();
+            }
+        }
+        context.fillStyle = "yellow";
+        context.font = "bold 50px Arial";
+        context.fillText("GAME OVER", (canvas.width/2)-(context.measureText("GAME OVER").width/2), canvas.height/2);
+
+        context.shadowColor = "black";
+        context.shadowBlur = 5;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.fillText("score:" + SCORE, 3, 51);
+        context.shadowColor = "transparent";
+        context.shadowBlur = 0;
     }
 }
 function keyDownHandler(evt){
@@ -352,7 +442,7 @@ function keyDownHandler(evt){
             break;
         case 32:
             //spacebar
-            if(Hero.state !== Hero.hit){
+            if(Hero.state !== Hero.hit && GAMESTATE === PLAYING && shots.length<3){
                 shoot();
             }
             break;
@@ -374,5 +464,7 @@ function keyUpHandler(evt){
             break;
     }
 }
+let startButton = document.getElementById('start');
+startButton.addEventListener("click", startGame, false);
 window.addEventListener("keydown", keyDownHandler, false);
 window.addEventListener("keyup", keyUpHandler, false);
