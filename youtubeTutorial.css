@@ -7,8 +7,3 @@ body{
     height: 100%;
     text-align: center;
 }
-#start{
-    position: relative;
-    top: 20px;
-    left: -500px;
-}
