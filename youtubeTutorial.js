@@ -10,7 +10,7 @@ let PAUSED = 1;
 let OVER = 2;
 let GAMESTATE = PAUSED;
 let SCORE;
-let TIMER = 15;
+let TIMER = 30;
 let timerInterval;
 let shots = 0;
 let canvas = document.getElementById('canvas');
@@ -91,12 +91,12 @@ function pauseGame(){
 }
 function startGame(){
     GAMESTATE = PLAYING;
-    startButton.innerHTML = "PAUSED";
+    startButton.innerHTML = "PAUSE";
     startButton.removeEventListener("click", startGame);
     startButton.addEventListener("click", pauseGame, false);
     if(!Hero || TIMER === 0){
         SCORE = 0;
-        TIMER = 15;
+        TIMER = 30;
         makeHero((canvas.width/2)-30, canvas.height - 60);
         for(var i=0; i<10; i++){
             //makeAlien((canvas.width/2)*i,canvas.height/2);
@@ -195,6 +195,7 @@ function destroyHero(){
     setTimeout(function(){
         spriteArray.splice(spriteArray.indexOf(Hero), 1);
         Hero = null;
+        endGame();
     },200);
 }
 function flipFlop(alien){
@@ -379,19 +380,19 @@ function drawRect(x, y, width, height, color1, color2){
 }
 function update(){
     for(sprite of spriteArray){
-        sprite.update();
+        if(GAMESTATE === PLAYING)sprite.update();
     }
     render();
     requestAnimationFrame(update, canvas);
 }
 function render(){
+    context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "yellow";
     context.shadowColor = "black";
     context.shadowBlur = 5;
     context.shadowOffsetX = 0;
     context.shadowOffsetY = 0;
     if(GAMESTATE === PLAYING){
-        context.clearRect(0, 0, canvas.width, canvas.height);
         for(sprite of spriteArray){
             sprite.draw();
         }
