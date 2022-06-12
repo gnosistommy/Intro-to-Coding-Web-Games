@@ -86,14 +86,14 @@ assetsToLoad.push(spriteSheet);
 makeImage(0, -2, canvas.width+1, canvas.height+2, 0, 50, 500, 400, spriteSheet, "background");
 function pauseGame(){
     GAMESTATE = PAUSED;
-    setStart();
+    //setStart();
     clearInterval(timerInterval);
 }
 function startGame(){
     GAMESTATE = PLAYING;
-    startButton.innerHTML = "PAUSE";
+    /*startButton.innerHTML = "PAUSE";
     startButton.removeEventListener("click", startGame);
-    startButton.addEventListener("click", pauseGame, false);
+    startButton.addEventListener("click", pauseGame, false);*/
     if(!Hero || TIMER === 0){
         SCORE = 0;
         TIMER = 30;
@@ -112,11 +112,30 @@ function startGame(){
             endGame();
         }
     },1000);
+    var random1 = getRandomNum(9000)+1000;
+    recur(random1);
+}
+function recur(time){
+    setTimeout(function(){
+        dropCoin();
+        var random2 = getRandomNum(9000)+1000;
+        if(GAMESTATE === PLAYING)recur(random2);
+    },time); 
+}
+function dropCoin(){
+    let num = Math.floor(canvas.width/55);
+    var x = (canvas.width/num)*getRandomNum(num);
+    var y = -50;
+    makeCoin(x,y);
 }
 function setStart(){
-    startButton.innerHTML = "START";
-    startButton.removeEventListener("click", pauseGame);
-    startButton.addEventListener("click", startGame, false);
+    if(buttonText.innerHTML !== "START"){
+        buttonText.innerHTML = "START";
+    }else{
+        buttonText.innerHTML = "PAUSE";
+    }
+    //startButton.removeEventListener("click", pauseGame);
+    //startButton.addEventListener("click", startGame, false);
 }
 function endGame(){
     GAMESTATE = OVER;
@@ -184,6 +203,7 @@ function getRandomNum(max){
     return Math.floor(Math.random()*max);
 }
 function destroyAlien(alien){
+    explosionSound();
     alien.sourceX = 150;
     setTimeout(function(){
         spriteArray.splice(spriteArray.indexOf(alien), 1);
@@ -191,6 +211,7 @@ function destroyAlien(alien){
     },200);
 }
 function destroyHero(){
+    explosionSound();
     Hero.sourceX = 200;
     setTimeout(function(){
         spriteArray.splice(spriteArray.indexOf(Hero), 1);
@@ -208,6 +229,7 @@ function flipFlop(alien){
     }
 }
 function shoot(){
+    shootSound();
     let tempShot = makeImage(Hero.x+Hero.halfWidth()-12.5,Hero.y , 25, 20, 250, 0, 25, 20, spriteSheet, "shot");
     shots++;
     tempShot.update = function(){
@@ -233,6 +255,63 @@ function shoot(){
 function destroyShot(shot){
     spriteArray.splice(spriteArray.indexOf(shot), 1);
     shots--;
+}
+function makeCoin(x, y){
+    let tempCoin = makeImage(x, y, 55, 50, 275, 0, 55, 50, spriteSheet, "coin");
+    tempCoin.faceLeft = 2;
+    tempCoin.edge = 3;
+    tempCoin.faceRight = 4;
+    tempCoin.count = 0;
+    tempCoin.update = function(){
+        if(this.count%10 === 0){
+            switch(this.state){
+                case this.normal:
+                    this.state = this.faceRight;
+                    this.sourceX = 330;
+                    this.sourceWidth = 35;
+                    this.width = 35;
+                    this.x += 10;
+                    break;
+                case this.faceRight:
+                    this.state = this.edge;
+                    this.sourceX = 365;
+                    this.sourceWidth = 10;
+                    this.width = 10;
+                    this.x += 12.5;
+                    break;
+                case this.edge:
+                    this.state = this.faceLeft;
+                    this.sourceX = 375;
+                    this.sourceWidth = 35;
+                    this.width = 35;
+                    this.x -= 12.5;
+                    break;
+                case this.faceLeft:
+                    this.state = this.normal;
+                    this.sourceX = 275;
+                    this.sourceWidth = 55;
+                    this.width = 55;
+                    this.x -= 10;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if(this.state !== this.hit){
+            var hit = hitTestRectangle(this, Hero);
+            if(hit.hit && Hero.state !== Hero.hit){
+                SCORE += 500;
+                spriteArray.splice(spriteArray.indexOf(this),1);
+    coinSound();
+            }else{
+                this.y += 5;
+            }
+        }
+        this.count++;
+        if(this.count === 100){
+            this.count = 0;
+        }
+    };
 }
 function makeHero(x, y){
     Hero = makeImage(x, y, 60, 60, 0, 0, 50, 50, spriteSheet, "hero");
@@ -451,7 +530,37 @@ function keyUpHandler(evt){
             break;
     }
 }
+function buttonDown(evt){
+    evt.preventDefault();
+    startButton.style.width = "70px";
+    startButton.style.height = "70px";
+    startButton.style.left = "-223px";
+    startButton.style.top = "-58px";
+    startButton.style.boxShadow = "unset";
+    buttonText.style.fontSize = "13px";
+}
+function buttonUp(evt){
+    evt.preventDefault();
+    startButton.style.width = "75px";
+    startButton.style.height = "75px";
+    startButton.style.left = "-225px";
+    startButton.style.top = "-60px";
+    startButton.style.boxShadow = "0px 0px 5px black";
+    buttonText.style.fontSize = "14px";
+    if(evt.type === "mouseup"){
+        if(buttonText.innerHTML === "START"){
+            startGame();
+        }else{
+            pauseGame();
+        }
+        setStart();
+    }
+}
 let startButton = document.getElementById("startButton");
-startButton.addEventListener("click", startGame, false);
+let buttonText = document.getElementById("buttonText");
+startButton.addEventListener("mousedown", buttonDown, false);
+startButton.addEventListener("mouseup", buttonUp, false);
+startButton.addEventListener("mouseout", buttonUp, false);
+
 window.addEventListener("keydown", keyDownHandler, false);
 window.addEventListener("keyup", keyUpHandler, false);
