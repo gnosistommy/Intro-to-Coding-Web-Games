@@ -8,4 +8,4 @@ The game completed in part 9 can be played here:
 https://alienattack.42web.io
 
 The game completed in the bonus video can be played here:
-https://alienattack.infinityfreeapp.com
+https://alienattack.rf.gd
